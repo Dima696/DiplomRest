@@ -1,7 +1,6 @@
 package ru.netodology.backendnet.service;
 
 import org.springframework.core.io.Resource;
-import org.springframework.web.multipart.MultipartFile;
 import ru.netodology.backendnet.dto.FileRenameRequestDto;
 import ru.netodology.backendnet.dto.FileRs;
 import ru.netodology.backendnet.dto.ResponseDto;

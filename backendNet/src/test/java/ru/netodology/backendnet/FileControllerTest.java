@@ -1,26 +1,14 @@
 package ru.netodology.backendnet;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockMultipartFile;
-import ru.netodology.backendnet.controller.impl.FileController;
-import ru.netodology.backendnet.service.imp.FileService;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 //public class FileControllerTest {
 //
 //    @InjectMocks
-//    private FileController fileController;
+//    private FileControllerImpl fileController;
 //
 //    @Mock
-//    private FileService fileService;
+//    private FileServiceImpl fileService;
 //
 //    @BeforeEach
 //    public void setup() {

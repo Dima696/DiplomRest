@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 import ru.netodology.backendnet.dto.FileRs;
-import ru.netodology.backendnet.model.User;
 import ru.netodology.backendnet.model.UserFile;
 
 import java.util.List;
