@@ -1,15 +1,16 @@
-package ru.netodology.backendnet.service.imp;
+package ru.netodology.backendnet.service;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 import ru.netodology.backendnet.dto.FileRenameRequestDto;
 import ru.netodology.backendnet.dto.FileRs;
 import ru.netodology.backendnet.dto.ResponseDto;
@@ -20,12 +21,9 @@ import ru.netodology.backendnet.model.User;
 import ru.netodology.backendnet.model.UserFile;
 import ru.netodology.backendnet.repository.FileRepository;
 import ru.netodology.backendnet.repository.UserRepository;
-import ru.netodology.backendnet.service.IFile;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -33,22 +31,22 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class FileService implements IFile {
+public class FileServiceImpl implements FileService {
     private final UserRepository userRepository;
     private final FileRepository fileRepository;
 
     @Override
     @Transactional
-    public ResponseDto saveFile(MultipartFile file, String filename, Integer userId) {
+    public ResponseDto saveFile(Resource file, String filename, Integer userId) {
         User user = findUserById(userId);
-        checkExistFileByIdAndUser(filename, userId);
+        checkExistFileByIdAndUser(filename);
         try {
-            String content = getContentFile(file);
+            byte[] content = getContentFile(file);
             UserFile userFile = UserFile.builder()
                     .filename(filename)
                     .user(user)
                     .content(content)
-                    .size(file.getSize())
+                    .size(file.contentLength())
                     .lastModifyingDateTime(LocalDateTime.now())
                     .build();
             fileRepository.saveAndFlush(userFile);
@@ -101,13 +99,14 @@ public class FileService implements IFile {
     }
 
     @Override
-    public byte[] getFileByFilename(String filename, Integer userId) {
+    @Transactional
+    public Resource getFileByFilename(String filename, Integer userId) {
         UserFile userFile = findFileAndGetIfExist(filename, userId);
-        return userFile.getContent().getBytes(StandardCharsets.UTF_8);
+        return new ByteArrayResource(userFile.getContent());
     }
 
-    private void checkExistFileByIdAndUser(String filename, Integer userId) {
-        if(fileRepository.existsByFilename(filename)) {
+    private void checkExistFileByIdAndUser(String filename) {
+        if (fileRepository.existsByFilename(filename)) {
             throw new FileOperationException("File with filename ='%s' already exist".formatted(filename));
         }
     }
@@ -129,23 +128,21 @@ public class FileService implements IFile {
         }
     }
 
-    private String getContentFile(MultipartFile file) throws IOException {
-        String originalFilename = file.getOriginalFilename();
+    private byte[] getContentFile(Resource resource) throws IOException {
+        String originalFilename = resource.getFilename();
         if (Objects.nonNull(originalFilename) && originalFilename.endsWith("pdf")) {
-            return readFilePDF(file);
+            return readFilePDF(resource);
         }
-        return Arrays.toString(file.getBytes());
+        return resource.getInputStream().readAllBytes();
     }
 
-    private String readFilePDF(MultipartFile file) {
-        String content = "";
-        try (PDDocument document = PDDocument.load(file.getInputStream())) {
+    private byte[] readFilePDF(Resource resource) {
+        try (PDDocument document = PDDocument.load(resource.getInputStream())) {
             PDFTextStripper pdfTextStripper = new PDFTextStripper();
-            content = pdfTextStripper.getText(document);
+            return pdfTextStripper.getText(document).getBytes();
         } catch (IOException e) {
             throw new FileOperationException("Error of reading file");
         }
-        return content;
     }
 
     private List<FileRs> getFilesByUserId(Integer userId, Integer limit, Sort sort) {

@@ -19,10 +19,11 @@ public class UserFile {
     @Column(name = "filename")
     private String filename;
     @OneToOne
-    @JoinColumn(name = "user.id", referencedColumnName = "id")
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
-    @Column(length = 1257)
-    private String content;
+    @Lob
+    @Column
+    private byte[] content;
     private LocalDateTime lastModifyingDateTime;
     private Long size;
 }

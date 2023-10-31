@@ -1,17 +1,19 @@
-package ru.netodology.backendnet.controller.impl;
+package ru.netodology.backendnet.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import ru.netodology.backendnet.controller.IProcessingFileController;
 import ru.netodology.backendnet.dto.FileRenameRequestDto;
 import ru.netodology.backendnet.dto.FileRs;
 import ru.netodology.backendnet.dto.ResponseDto;
-import ru.netodology.backendnet.service.imp.FileService;
+import ru.netodology.backendnet.service.AuthService;
+import ru.netodology.backendnet.service.FileService;
 
 import java.util.List;
 
@@ -19,44 +21,48 @@ import java.util.List;
 @RestController
 @RequestMapping("/file")
 @RequiredArgsConstructor
-public class FileController implements IProcessingFileController {
+public class FileControllerImpl implements ProcessingFileController {
     private final FileService fileService;
+    private final AuthService authService;
 
     @Override
-    @PostMapping("/{userId}")
-    public ResponseEntity<? extends ResponseDto> uploadFile(
+    @PostMapping
+    public ResponseEntity<ResponseDto> uploadFile(
             @RequestParam("filename") String filename,
-            @RequestPart("file") @NotNull MultipartFile file, @PathVariable Integer userId) {
+            @RequestPart("file") @NotNull MultipartFile file, HttpServletRequest request) {
+        Integer userId = authService.getUserIdByLogin(request.getRemoteUser());
         log.info("Request for upload file filename={} by user with id={}", filename, userId);
-        ResponseDto result = fileService.saveFile(file, filename, userId);
+        ResponseDto result = fileService.saveFile(file.getResource(), filename, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
+
     @Override
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<? extends ResponseDto> deleteFile(
-            @RequestParam("filename") String filename,
-            @PathVariable Integer userId) {
+    @DeleteMapping
+    public ResponseEntity<ResponseDto> deleteFile(
+            @RequestParam("filename") String filename, HttpServletRequest request) {
+        Integer userId = authService.getUserIdByLogin(request.getRemoteUser());
         log.info("Request for delete file with filename={} by user with id={}", filename, userId);
         ResponseDto result = fileService.deleteFile(filename, userId);
         return ResponseEntity.ok(result);
     }
 
     @Override
-    @GetMapping("/{userId}")
-    public ResponseEntity<byte[]> downloadFile(
-            @RequestParam("filename") String filename,
-            @PathVariable Integer userId) {
+    @GetMapping
+    public ResponseEntity<Resource> downloadFile(
+            @RequestParam("filename") String filename, HttpServletRequest request) {
+        Integer userId = authService.getUserIdByLogin(request.getRemoteUser());
         log.info("Request for download file by user with id={}: filename={}", userId, filename);
-        byte[] file = fileService.getFileByFilename(filename, userId);
-        return ResponseEntity.ok(file);
+        Resource resource = fileService.getFileByFilename(filename, userId);
+        return ResponseEntity.ok(resource);
     }
 
     @Override
-    @PutMapping("/{userId}")
-    public ResponseEntity<? extends ResponseDto> renameFile(
+    @PutMapping
+    public ResponseEntity<ResponseDto> renameFile(
             @RequestParam("filename") String currentFilename,
-            @RequestBody FileRenameRequestDto request, @PathVariable Integer userId) {
+            @RequestBody FileRenameRequestDto request, HttpServletRequest httpServletRequest) {
+        Integer userId = authService.getUserIdByLogin(httpServletRequest.getRemoteUser());
         log.info("Request for rename file by user with id={}: filename={}, new filename={}",
                 userId, currentFilename, request.filename());
         ResponseDto result = fileService.renameFile(currentFilename, request, userId);
@@ -64,10 +70,11 @@ public class FileController implements IProcessingFileController {
     }
 
     @Override
-    @GetMapping("/{userId}/list")
+    @GetMapping("/list")
     public ResponseEntity<List<FileRs>> getAllFiles(
             @RequestParam(value = "limit", required = false, defaultValue = "100") Integer limit,
-            @PathVariable Integer userId) {
+            HttpServletRequest request) {
+        Integer userId = authService.getUserIdByLogin(request.getRemoteUser());
         log.info("Request for get all files by user with id={}", userId);
         List<FileRs> files = fileService.getAllFiles(limit, userId);
         return ResponseEntity.ok(files);
